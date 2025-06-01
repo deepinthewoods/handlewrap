@@ -1234,9 +1234,9 @@
                 const towardsCenterY = centerY - corner.y;
                 const centerLength = Math.sqrt(towardsCenterX * towardsCenterX + towardsCenterY * towardsCenterY);
                 
-                // Offset away from center
-                labelX -= (towardsCenterX / centerLength) * offsetDistance;
-                labelY -= (towardsCenterY / centerLength) * offsetDistance;
+                // Offset toward center instead of away from center
+                labelX += (towardsCenterX / centerLength) * offsetDistance;
+                labelY += (towardsCenterY / centerLength) * offsetDistance;
                 
                 // Angle label
                 const angleLabel = document.createElementNS(svgNS, 'text');

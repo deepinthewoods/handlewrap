@@ -11,6 +11,9 @@
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
+            border: 3px solid #333;
+            min-height: calc(100vh - 46px);
+            box-sizing: border-box;
         }
         .container {
             background-color: white;
@@ -1211,38 +1214,39 @@
             
             let scale2D, offsetX, offsetY;
             
+            // Always show page outline
+            const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+            const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+            
+            // Calculate SVG display scale to show the page
+            const svgScale = Math.min(svgWidth / pageWidth, (svgHeight - labelSpace) / pageHeight) * 0.8;
+            
+            const pageDisplayWidth = pageWidth * svgScale;
+            const pageDisplayHeight = pageHeight * svgScale;
+            const pageLeft = (svgWidth - pageDisplayWidth) / 2;
+            const pageTop = (svgHeight - labelSpace - pageDisplayHeight) / 2;
+            
+            // Check if shape actually fits on page
+            let shapeFits;
+            if (ignoreBorderX) {
+                shapeFits = shapeHeight <= pageHeight; // Only check height
+            } else {
+                shapeFits = shapeWidth <= pageWidth && shapeHeight <= pageHeight;
+            }
+            
+            // Draw page outline
+            const pageOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            pageOutline.setAttribute('x', pageLeft);
+            pageOutline.setAttribute('y', pageTop);
+            pageOutline.setAttribute('width', pageDisplayWidth);
+            pageOutline.setAttribute('height', pageDisplayHeight);
+            pageOutline.setAttribute('fill', 'none');
+            pageOutline.setAttribute('stroke', shapeFits ? '#999' : '#ff4444');
+            pageOutline.setAttribute('stroke-width', shapeFits ? '2' : '3');
+            pageOutline.setAttribute('stroke-dasharray', '5,5');
+            svg.appendChild(pageOutline);
+            
             if (fitToPage) {
-                // Show page outline and position shape within it
-                const pageWidth = parseFloat(document.getElementById('pageWidth').value);
-                const pageHeight = parseFloat(document.getElementById('pageHeight').value);
-                
-                // Calculate SVG display scale to show the page
-                const svgScale = Math.min(svgWidth / pageWidth, (svgHeight - labelSpace) / pageHeight) * 0.8;
-                
-                const pageDisplayWidth = pageWidth * svgScale;
-                const pageDisplayHeight = pageHeight * svgScale;
-                const pageLeft = (svgWidth - pageDisplayWidth) / 2;
-                const pageTop = (svgHeight - labelSpace - pageDisplayHeight) / 2;
-                
-                // Check if shape actually fits on page
-                let shapeFits;
-                if (ignoreBorderX) {
-                    shapeFits = shapeHeight <= pageHeight; // Only check height
-                } else {
-                    shapeFits = shapeWidth <= pageWidth && shapeHeight <= pageHeight;
-                }
-                
-                // Draw page outline
-                const pageOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                pageOutline.setAttribute('x', pageLeft);
-                pageOutline.setAttribute('y', pageTop);
-                pageOutline.setAttribute('width', pageDisplayWidth);
-                pageOutline.setAttribute('height', pageDisplayHeight);
-                pageOutline.setAttribute('fill', 'none');
-                pageOutline.setAttribute('stroke', shapeFits ? '#999' : '#ff4444');
-                pageOutline.setAttribute('stroke-width', shapeFits ? '2' : '3');
-                pageOutline.setAttribute('stroke-dasharray', '5,5');
-                svg.appendChild(pageOutline);
                 
                 // Position shape at top-right corner of page (like double shape mode)
                 // Right edge of shape aligns with right edge of page, top edge aligns with top edge of page
@@ -1273,19 +1277,12 @@
                 }
                 
             } else {
-                // Standard view - fit to SVG canvas
-                const availableWidth = svgWidth - 2 * padding;
-                const availableHeight = svgHeight - labelSpace - 2 * padding;
+                // Standard view - use same positioning as fitToPage mode
+                // Position shape at top-right corner of page (same as fitToPage)
+                offsetX = pageLeft + pageDisplayWidth - (bounds.maxX * svgScale);
+                offsetY = pageTop - (bounds.minY * svgScale);
                 
-                const scaleX = availableWidth / shapeWidth;
-                const scaleY = availableHeight / shapeHeight;
-                scale2D = Math.min(scaleX, scaleY, 3);
-                
-                const scaledWidth = shapeWidth * scale2D;
-                const scaledHeight = shapeHeight * scale2D;
-                
-                offsetX = (svgWidth - scaledWidth) / 2 - bounds.minX * scale2D;
-                offsetY = padding - bounds.minY * scale2D;
+                scale2D = svgScale;
             }
             
             // Draw the actual shape polygon
@@ -1392,30 +1389,33 @@
             
             let svgScale, pageLeft, pageTop, pageDisplayWidth, pageDisplayHeight;
             
+            // Always show page outline for double shapes
+            svgScale = Math.min(svgWidth / pageWidth, (svgHeight - 100) / pageHeight) * 0.8;
+            
+            pageDisplayWidth = pageWidth * svgScale;
+            pageDisplayHeight = pageHeight * svgScale;
+            pageLeft = (svgWidth - pageDisplayWidth) / 2;
+            pageTop = (svgHeight - 100 - pageDisplayHeight) / 2;
+            
+            const pageOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            pageOutline.setAttribute('x', pageLeft);
+            pageOutline.setAttribute('y', pageTop);
+            pageOutline.setAttribute('width', pageDisplayWidth);
+            pageOutline.setAttribute('height', pageDisplayHeight);
+            pageOutline.setAttribute('fill', 'none');
+            pageOutline.setAttribute('stroke', canFitOnPage ? '#999' : '#ff4444');
+            pageOutline.setAttribute('stroke-width', canFitOnPage ? '2' : '3');
+            pageOutline.setAttribute('stroke-dasharray', '5,5');
+            svg.appendChild(pageOutline);
+            
             if (fitToPage) {
-                // Show page outline when fitting to page
-                svgScale = Math.min(svgWidth / pageWidth, (svgHeight - 100) / pageHeight) * 0.8;
-                
-                pageDisplayWidth = pageWidth * svgScale;
-                pageDisplayHeight = pageHeight * svgScale;
-                pageLeft = (svgWidth - pageDisplayWidth) / 2;
-                pageTop = (svgHeight - 100 - pageDisplayHeight) / 2;
-                
-                const pageOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                pageOutline.setAttribute('x', pageLeft);
-                pageOutline.setAttribute('y', pageTop);
-                pageOutline.setAttribute('width', pageDisplayWidth);
-                pageOutline.setAttribute('height', pageDisplayHeight);
-                pageOutline.setAttribute('fill', 'none');
-                pageOutline.setAttribute('stroke', canFitOnPage ? '#999' : '#ff4444');
-                pageOutline.setAttribute('stroke-width', canFitOnPage ? '2' : '3');
-                pageOutline.setAttribute('stroke-dasharray', '5,5');
-                svg.appendChild(pageOutline);
                 
                 // Position shapes within page coordinates
+                // Shape 1: Top-right corner
                 const shape1PageX = pageWidth - shapeWidth;
                 const shape1PageY = 0;
                 
+                // Shape 2: Bottom-left corner  
                 const shape2PageX = 0;
                 const shape2PageY = pageHeight - shapeHeight;
                 
@@ -1475,26 +1475,30 @@
                 addLabel(svg, svgWidth / 2, svgHeight - 40, `Two shapes on ${pageWidth}×${pageHeight}mm page - ${statusText}`, 'bold', '14px', statusColor);
                 
             } else {
-                // Standard view - just show both shapes without page constraint
-                const padding = 40;
-                const availableWidth = svgWidth - 2 * padding;
-                const availableHeight = svgHeight - 100 - 2 * padding;
+                // Standard view - use same positioning as fitToPage mode
+                // Shape 1: Top-right corner
+                const shape1PageX = pageWidth - shapeWidth;
+                const shape1PageY = 0;
                 
-                // Calculate scale to fit both shapes
-                const totalWidth = shapeWidth * 2; // Assume side by side
-                const scaleX = availableWidth / totalWidth;
-                const scaleY = availableHeight / shapeHeight;
-                const displayScale = Math.min(scaleX, scaleY, 1.5);
+                // Shape 2: Bottom-left corner  
+                const shape2PageX = 0;
+                const shape2PageY = pageHeight - shapeHeight;
                 
-                const shape1X = padding;
-                const shape2X = padding + shapeWidth * displayScale + 50;
-                const shapeY = padding;
+                const shape1SvgX = pageLeft + (shape1PageX * svgScale);
+                const shape1SvgY = pageTop + (shape1PageY * svgScale);
                 
-                drawPolygonAtPosition(svg, shape1Polygon, shape1X - shape1Bounds.minX * displayScale, shapeY - shape1Bounds.minY * displayScale, displayScale, '#FF4444', 'Shape 1');
-                drawPolygonAtPosition(svg, shape2Polygon, shape2X - shape2Bounds.minX * displayScale, shapeY - shape2Bounds.minY * displayScale, displayScale, '#4444FF', 'Shape 2 (180°)');
+                const shape2SvgX = pageLeft + (shape2PageX * svgScale);
+                const shape2SvgY = pageTop + (shape2PageY * svgScale);
+                
+                const shape1Color = '#FF4444';
+                const shape2Color = '#4444FF';
+                
+                // Draw shapes in same positions as fitToPage mode
+                drawPolygonAtPosition(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale, shape1Color, 'Shape 1 (R)');
+                drawPolygonAtPosition(svg, shape2Polygon, shape2SvgX - shape2Bounds.minX * svgScale, shape2SvgY - shape2Bounds.minY * svgScale, svgScale, shape2Color, 'Shape 2 (L)');
                 
                 // Add corner labels only for Shape 1
-                addCornerLabels(svg, shape1Polygon, shape1X - shape1Bounds.minX * displayScale, shapeY - shape1Bounds.minY * displayScale, displayScale);
+                addCornerLabels(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale);
                 
                 addLabel(svg, svgWidth / 2, svgHeight - 40, `Two shapes for nested cutting`, 'bold');
             }

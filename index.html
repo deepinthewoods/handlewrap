@@ -326,6 +326,201 @@
             return angleRad * 180 / Math.PI;
         }
 
+        // Add extended blue line with border intersection labels
+        function addExtendedBlueLine(svg, polygon, offsetX, offsetY, scale, pageLeft, pageTop, pageDisplayWidth, pageDisplayHeight) {
+            if (polygon.length < 4) return;
+            
+            const svgNS = 'http://www.w3.org/2000/svg';
+            const numPoints = polygon.length;
+            const halfPoints = Math.floor(numPoints / 2);
+            
+            // The blue side is the 3rd side (index 2) in the sideColors array: ['#FF4444', '#44FF44', '#4444FF', '#FFAA00']
+            // From drawPolygonAtPosition, the sides are:
+            // 0: Bottom edge (Red)
+            // 1: Right edge (Green) 
+            // 2: Top edge (Blue) - this is what we want
+            // 3: Left edge (Orange)
+            
+            // The top edge is from halfPoints to numPoints-1 (reversed)
+            // So we need the start and end of the top edge
+            const topEdgeStart = halfPoints;
+            const topEdgeEnd = numPoints - 1;
+            
+            // Transform to SVG coordinates
+            const startX = offsetX + polygon[topEdgeStart].x * scale;
+            const startY = offsetY + polygon[topEdgeStart].y * scale;
+            const endX = offsetX + polygon[topEdgeEnd].x * scale;
+            const endY = offsetY + polygon[topEdgeEnd].y * scale;
+            
+            // Calculate line direction
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            
+            if (length === 0) return;
+            
+            // Normalize direction vector
+            const dirX = dx / length;
+            const dirY = dy / length;
+            
+            // Extend line to find intersections with page borders
+            const pageRight = pageLeft + pageDisplayWidth;
+            const pageBottom = pageTop + pageDisplayHeight;
+            
+            // Find intersections with page borders
+            let leftIntersection = null;
+            let rightIntersection = null;
+            let topIntersection = null;
+            let bottomIntersection = null;
+            
+            // Intersection with left border (x = pageLeft)
+            if (dirX !== 0) {
+                const t = (pageLeft - startX) / dirX;
+                const y = startY + t * dirY;
+                if (y >= pageTop && y <= pageBottom) {
+                    leftIntersection = { x: pageLeft, y: y, t: t };
+                }
+            }
+            
+            // Intersection with right border (x = pageRight)
+            if (dirX !== 0) {
+                const t = (pageRight - startX) / dirX;
+                const y = startY + t * dirY;
+                if (y >= pageTop && y <= pageBottom) {
+                    rightIntersection = { x: pageRight, y: y, t: t };
+                }
+            }
+            
+            // Intersection with top border (y = pageTop)
+            if (dirY !== 0) {
+                const t = (pageTop - startY) / dirY;
+                const x = startX + t * dirX;
+                if (x >= pageLeft && x <= pageRight) {
+                    topIntersection = { x: x, y: pageTop, t: t };
+                }
+            }
+            
+            // Intersection with bottom border (y = pageBottom)
+            if (dirY !== 0) {
+                const t = (pageBottom - startY) / dirY;
+                const x = startX + t * dirX;
+                if (x >= pageLeft && x <= pageRight) {
+                    bottomIntersection = { x: x, y: pageBottom, t: t };
+                }
+            }
+            
+            // Find the two farthest intersections in opposite directions
+            const intersections = [leftIntersection, rightIntersection, topIntersection, bottomIntersection]
+                .filter(i => i !== null);
+            
+            if (intersections.length >= 2) {
+                // Sort by parameter t to get endpoints
+                intersections.sort((a, b) => a.t - b.t);
+                
+                const startIntersection = intersections[0];
+                const endIntersection = intersections[intersections.length - 1];
+                
+                // Draw extended blue line
+                const extendedLine = document.createElementNS(svgNS, 'line');
+                extendedLine.setAttribute('x1', startIntersection.x);
+                extendedLine.setAttribute('y1', startIntersection.y);
+                extendedLine.setAttribute('x2', endIntersection.x);
+                extendedLine.setAttribute('y2', endIntersection.y);
+                extendedLine.setAttribute('stroke', '#0088FF');
+                extendedLine.setAttribute('stroke-width', '2');
+                extendedLine.setAttribute('stroke-dasharray', '8,4');
+                extendedLine.setAttribute('opacity', '0.8');
+                svg.appendChild(extendedLine);
+                
+                // Calculate distances from page corners to intersections in mm
+                let startCornerDistance, endCornerDistance;
+                let startCornerName, endCornerName;
+                
+                // Determine which corner is closest to each intersection
+                const corners = {
+                    'top-left': { x: pageLeft, y: pageTop },
+                    'top-right': { x: pageRight, y: pageTop },
+                    'bottom-left': { x: pageLeft, y: pageBottom },
+                    'bottom-right': { x: pageRight, y: pageBottom }
+                };
+                
+                let minStartDist = Infinity;
+                let minEndDist = Infinity;
+                
+                for (const [name, corner] of Object.entries(corners)) {
+                    const startDist = Math.sqrt(
+                        (startIntersection.x - corner.x) ** 2 + (startIntersection.y - corner.y) ** 2
+                    ) / scale;
+                    const endDist = Math.sqrt(
+                        (endIntersection.x - corner.x) ** 2 + (endIntersection.y - corner.y) ** 2
+                    ) / scale;
+                    
+                    if (startDist < minStartDist) {
+                        minStartDist = startDist;
+                        startCornerDistance = startDist;
+                        startCornerName = name;
+                    }
+                    if (endDist < minEndDist) {
+                        minEndDist = endDist;
+                        endCornerDistance = endDist;
+                        endCornerName = name;
+                    }
+                }
+                
+                // Add distance labels at midpoint between intersection and corner
+                const startMidX = (startIntersection.x + corners[startCornerName].x) / 2;
+                const startMidY = (startIntersection.y + corners[startCornerName].y) / 2;
+                
+                const startLabel = document.createElementNS(svgNS, 'text');
+                startLabel.setAttribute('x', startMidX);
+                startLabel.setAttribute('y', startMidY);
+                startLabel.setAttribute('text-anchor', 'middle');
+                startLabel.setAttribute('font-size', '12px');
+                startLabel.setAttribute('font-weight', 'bold');
+                startLabel.setAttribute('fill', '#0088FF');
+                startLabel.setAttribute('stroke', 'white');
+                startLabel.setAttribute('stroke-width', '3');
+                startLabel.setAttribute('paint-order', 'stroke');
+                startLabel.textContent = `${startCornerDistance.toFixed(1)}mm`;
+                svg.appendChild(startLabel);
+                
+                const endMidX = (endIntersection.x + corners[endCornerName].x) / 2;
+                const endMidY = (endIntersection.y + corners[endCornerName].y) / 2;
+                
+                const endLabel = document.createElementNS(svgNS, 'text');
+                endLabel.setAttribute('x', endMidX);
+                endLabel.setAttribute('y', endMidY);
+                endLabel.setAttribute('text-anchor', 'middle');
+                endLabel.setAttribute('font-size', '12px');
+                endLabel.setAttribute('font-weight', 'bold');
+                endLabel.setAttribute('fill', '#0088FF');
+                endLabel.setAttribute('stroke', 'white');
+                endLabel.setAttribute('stroke-width', '3');
+                endLabel.setAttribute('paint-order', 'stroke');
+                endLabel.textContent = `${endCornerDistance.toFixed(1)}mm`;
+                svg.appendChild(endLabel);
+                
+                // Add small circles at intersection points
+                const startCircle = document.createElementNS(svgNS, 'circle');
+                startCircle.setAttribute('cx', startIntersection.x);
+                startCircle.setAttribute('cy', startIntersection.y);
+                startCircle.setAttribute('r', '4');
+                startCircle.setAttribute('fill', '#0088FF');
+                startCircle.setAttribute('stroke', 'white');
+                startCircle.setAttribute('stroke-width', '2');
+                svg.appendChild(startCircle);
+                
+                const endCircle = document.createElementNS(svgNS, 'circle');
+                endCircle.setAttribute('cx', endIntersection.x);
+                endCircle.setAttribute('cy', endIntersection.y);
+                endCircle.setAttribute('r', '4');
+                endCircle.setAttribute('fill', '#0088FF');
+                endCircle.setAttribute('stroke', 'white');
+                endCircle.setAttribute('stroke-width', '2');
+                svg.appendChild(endCircle);
+            }
+        }
+
         // Single shape fitting function - finds optimal overlap to fit page
         function findOptimalOverlapForSingleShape(targetWidth, targetHeight, ignoreBorderX = false) {
             let minOverlap = 0.1;   
@@ -1302,6 +1497,9 @@
             
             // Add corner labels for distance and angles
             addCornerLabels(svg, polygon, offsetX, offsetY, scale2D);
+            
+            // Add extended blue line with border intersection labels
+            addExtendedBlueLine(svg, polygon, offsetX, offsetY, scale2D, pageLeft, pageTop, pageDisplayWidth, pageDisplayHeight);
             
             // Add tabs if enabled
             if (addStartTab || addEndTab) {

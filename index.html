@@ -1633,6 +1633,12 @@
                 // Add corner labels only for Shape 1
                 addCornerLabels(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale);
                 
+                // Add extended blue line for Shape 1
+                addExtendedBlueLine(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale, pageLeft, pageTop, pageDisplayWidth, pageDisplayHeight);
+                
+                // Add extended blue line for Shape 1
+                addExtendedBlueLine(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale, pageLeft, pageTop, pageDisplayWidth, pageDisplayHeight);
+                
                 // Draw border extension indicators if ignoreBorderX is enabled
                 if (ignoreBorderX && fitToPage) {
                     // Left border extension for shape 2

@@ -1506,21 +1506,73 @@
         function drawPolygonAtPosition(svg, polygon, offsetX, offsetY, scale, color, label = null) {
             const svgNS = 'http://www.w3.org/2000/svg';
             
-            let pathData = `M ${(offsetX + polygon[0].x * scale).toFixed(2)} ${(offsetY + polygon[0].y * scale).toFixed(2)}`;
-            for (let i = 1; i < polygon.length; i++) {
-                pathData += ` L ${(offsetX + polygon[i].x * scale).toFixed(2)} ${(offsetY + polygon[i].y * scale).toFixed(2)}`;
-            }
-            pathData += ' Z';
+            // Check if this is shape 1 (red color) to apply multi-colored sides
+            const isShape1 = color === '#FF4444' || color === '#ff8888';
             
-            const shapePath = document.createElementNS(svgNS, 'path');
-            shapePath.setAttribute('d', pathData);
-            const r = parseInt(color.substring(1,3), 16);
-            const g = parseInt(color.substring(3,5), 16);
-            const b = parseInt(color.substring(5,7), 16);
-            shapePath.setAttribute('fill', `rgba(${r}, ${g}, ${b}, 0.1)`);
-            shapePath.setAttribute('stroke', color);
-            shapePath.setAttribute('stroke-width', '2');
-            svg.appendChild(shapePath);
+            if (isShape1 && polygon.length >= 4) {
+                // Draw each side with different colors for shape 1
+                const sideColors = ['#FF4444', '#44FF44', '#4444FF', '#FFAA00']; // Red, Green, Blue, Orange
+                
+                // Find the 4 main corners (assuming quadrilateral shape)
+                const numPoints = polygon.length;
+                const halfPoints = Math.floor(numPoints / 2);
+                
+                // Create 4 sides as separate paths
+                const sides = [
+                    polygon.slice(0, halfPoints), // Bottom edge
+                    [polygon[halfPoints-1], polygon[halfPoints]], // Right edge  
+                    polygon.slice(halfPoints).reverse(), // Top edge (reversed)
+                    [polygon[numPoints-1], polygon[0]] // Left edge
+                ];
+                
+                // Draw each side with its own color
+                sides.forEach((side, index) => {
+                    if (side.length < 2) return;
+                    
+                    let pathData = `M ${(offsetX + side[0].x * scale).toFixed(2)} ${(offsetY + side[0].y * scale).toFixed(2)}`;
+                    for (let i = 1; i < side.length; i++) {
+                        pathData += ` L ${(offsetX + side[i].x * scale).toFixed(2)} ${(offsetY + side[i].y * scale).toFixed(2)}`;
+                    }
+                    
+                    const sidePath = document.createElementNS(svgNS, 'path');
+                    sidePath.setAttribute('d', pathData);
+                    sidePath.setAttribute('fill', 'none');
+                    sidePath.setAttribute('stroke', sideColors[index]);
+                    sidePath.setAttribute('stroke-width', '3');
+                    svg.appendChild(sidePath);
+                });
+                
+                // Add a light fill for the entire shape
+                let pathData = `M ${(offsetX + polygon[0].x * scale).toFixed(2)} ${(offsetY + polygon[0].y * scale).toFixed(2)}`;
+                for (let i = 1; i < polygon.length; i++) {
+                    pathData += ` L ${(offsetX + polygon[i].x * scale).toFixed(2)} ${(offsetY + polygon[i].y * scale).toFixed(2)}`;
+                }
+                pathData += ' Z';
+                
+                const fillPath = document.createElementNS(svgNS, 'path');
+                fillPath.setAttribute('d', pathData);
+                fillPath.setAttribute('fill', 'rgba(255, 68, 68, 0.05)');
+                fillPath.setAttribute('stroke', 'none');
+                svg.appendChild(fillPath);
+                
+            } else {
+                // Original drawing method for other shapes
+                let pathData = `M ${(offsetX + polygon[0].x * scale).toFixed(2)} ${(offsetY + polygon[0].y * scale).toFixed(2)}`;
+                for (let i = 1; i < polygon.length; i++) {
+                    pathData += ` L ${(offsetX + polygon[i].x * scale).toFixed(2)} ${(offsetY + polygon[i].y * scale).toFixed(2)}`;
+                }
+                pathData += ' Z';
+                
+                const shapePath = document.createElementNS(svgNS, 'path');
+                shapePath.setAttribute('d', pathData);
+                const r = parseInt(color.substring(1,3), 16);
+                const g = parseInt(color.substring(3,5), 16);
+                const b = parseInt(color.substring(5,7), 16);
+                shapePath.setAttribute('fill', `rgba(${r}, ${g}, ${b}, 0.1)`);
+                shapePath.setAttribute('stroke', color);
+                shapePath.setAttribute('stroke-width', '2');
+                svg.appendChild(shapePath);
+            }
             
             if (label) {
                 const bounds = getPolygonBounds(polygon);

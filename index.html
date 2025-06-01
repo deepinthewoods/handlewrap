@@ -161,11 +161,11 @@
                 </div>
                 <div class="control-group">
                     <label for="pageWidth">Page Width (mm):</label>
-                    <input type="number" id="pageWidth" value="420" min="50" step="1">
+                    <input type="number" id="pageWidth" value="420" min="50" step="1" onchange="updateVisualization()">
                 </div>
                 <div class="control-group">
                     <label for="pageHeight">Page Height (mm):</label>
-                    <input type="number" id="pageHeight" value="297" min="50" step="1">
+                    <input type="number" id="pageHeight" value="297" min="50" step="1" onchange="updateVisualization()">
                 </div>
             </div>
         </div>
@@ -173,36 +173,36 @@
         <div class="controls">
             <div class="control-group">
                 <label for="bottomDiameter">Bottom Diameter (mm):</label>
-                <input type="number" id="bottomDiameter" value="10" min="1" step="1">
+                <input type="number" id="bottomDiameter" value="10" min="1" step="1" onchange="updateVisualization()">
             </div>
             <div class="control-group">
                 <label for="topDiameter">Top Diameter (mm):</label>
-                <input type="number" id="topDiameter" value="80" min="1" step="1">
+                <input type="number" id="topDiameter" value="80" min="1" step="1" onchange="updateVisualization()">
             </div>
             <div class="control-group">
                 <label for="height">Height (mm):</label>
-                <input type="number" id="height" value="300" min="1" step="1">
+                <input type="number" id="height" value="300" min="1" step="1" onchange="updateVisualization()">
             </div>
             <div class="control-group">
                 <label for="startAngle">Initial Tape Angle (degrees):</label>
-                <input type="number" id="startAngle" value="45" min="0" max="89" step="1">
+                <input type="number" id="startAngle" value="45" min="0" max="89" step="1" onchange="updateVisualization()">
             </div>
             <div class="control-group">
                 <label for="overlap">Overlap Factor:</label>
-                <input type="number" id="overlap" value="1.0" min="-2.0" max="3.0" step="0.1">
+                <input type="number" id="overlap" value="1.0" min="-2.0" max="3.0" step="0.1" onchange="updateVisualization()">
                 <small id="overlapHint" style="color: #666; margin-top: 4px;">Manual control</small>
             </div>
             <div class="control-group">
                 <label for="tabWidth">Tab Width (mm):</label>
-                <input type="number" id="tabWidth" value="10" min="1" max="50" step="1">
+                <input type="number" id="tabWidth" value="10" min="1" max="50" step="1" onchange="updateVisualization()">
             </div>
             <div class="control-group">
                 <div class="checkbox-group">
-                    <input type="checkbox" id="startTab" checked>
+                    <input type="checkbox" id="startTab" checked onchange="updateVisualization()">
                     <label for="startTab">Add Start Point Tab</label>
                 </div>
                 <div class="checkbox-group">
-                    <input type="checkbox" id="endTab" checked>
+                    <input type="checkbox" id="endTab" checked onchange="updateVisualization()">
                     <label for="endTab">Add End Point Tab</label>
                 </div>
             </div>

@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geodesic Cone Unwrap</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+        .page-controls {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        .page-controls h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .visualization-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .canvas-container {
+            text-align: center;
+            background-color: #fafafa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .svg-container {
+            text-align: center;
+            background-color: #fafafa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            width: 100%;
+        }
+        .canvas-container h3, .svg-container h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        svg, canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        svg {
+            width: 100%;
+            height: 600px;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f4fd;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .efficiency-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cone Tape Winding Visualizer</h1>
+        
+        <div class="page-controls">
+            <h4>Display Settings</h4>
+            <div class="controls">
+                <div class="control-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="makeDouble" onchange="updateVisualization()">
+                        <label for="makeDouble">Create two shapes</label>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="fitToPage" onchange="updateVisualization()">
+                        <label for="fitToPage">Fit to page size</label>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="ignoreBorderX" onchange="updateVisualization()">
+                        <label for="ignoreBorderX">Ignore border X</label>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="pageWidth">Page Width (mm):</label>
+                    <input type="number" id="pageWidth" value="420" min="50" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="pageHeight">Page Height (mm):</label>
+                    <input type="number" id="pageHeight" value="297" min="50" step="1">
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="bottomDiameter">Bottom Diameter (mm):</label>
+                <input type="number" id="bottomDiameter" value="10" min="1" step="1">
+            </div>
+            <div class="control-group">
+                <label for="topDiameter">Top Diameter (mm):</label>
+                <input type="number" id="topDiameter" value="80" min="1" step="1">
+            </div>
+            <div class="control-group">
+                <label for="height">Height (mm):</label>
+                <input type="number" id="height" value="300" min="1" step="1">
+            </div>
+            <div class="control-group">
+                <label for="startAngle">Initial Tape Angle (degrees):</label>
+                <input type="number" id="startAngle" value="45" min="0" max="89" step="1">
+            </div>
+            <div class="control-group">
+                <label for="overlap">Overlap Factor:</label>
+                <input type="number" id="overlap" value="1.0" min="-2.0" max="3.0" step="0.1">
+                <small id="overlapHint" style="color: #666; margin-top: 4px;">Manual control</small>
+            </div>
+            <div class="control-group">
+                <label for="tabWidth">Tab Width (mm):</label>
+                <input type="number" id="tabWidth" value="10" min="1" max="50" step="1">
+            </div>
+            <div class="control-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="startTab" checked>
+                    <label for="startTab">Add Start Point Tab</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="endTab" checked>
+                    <label for="endTab">Add End Point Tab</label>
+                </div>
+            </div>
+        </div>
+        
+        <button onclick="updateVisualization()">Update Visualization</button>
+        <button onclick="saveSVG()">Save 2D Pattern as SVG</button>
+        
+        <div id="efficiencyInfo" class="efficiency-info" style="display: none;"></div>
+        
+        <div class="visualization-container">
+            <div class="svg-container">
+                <h3>Unwrapped Tape Shape</h3>
+                <svg id="svgCanvas" width="100%" height="600" viewBox="0 0 1200 600">
+                    <!-- SVG content will be generated here -->
+                </svg>
+            </div>
+            
+            <div class="canvas-container">
+                <h3>3D Preview</h3>
+                <canvas id="canvas3D" width="800" height="400"></canvas>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    Drag horizontally to rotate
+                </p>
+            </div>
+        </div>
+        
+        <div class="info">
+            <h3>About This Tape Winding Simulation:</h3>
+            <p>This tool simulates winding tape around a truncated cone, showing how the tape angle naturally decreases as the cone widens.</p>
+            <p><strong>Physics:</strong></p>
+            <ol>
+                <li>Start with a specific tape angle at the narrow end</li>
+                <li>Maintain constant "pitch" (vertical distance per revolution)</li>
+                <li>As the cone widens, the same pitch creates a smaller angle with the circumference</li>
+                <li>The tape naturally "straightens out" toward vertical at the wide end</li>
+                <li>The unwrapped shape shows the exact pattern to cut for wrapping</li>
+            </ol>
+            <p><strong>Display Options:</strong></p>
+            <ul>
+                <li><strong>Create two shapes:</strong> Shows two nested patterns that can be cut from the same material</li>
+                <li><strong>Fit to page:</strong> Automatically scales the pattern(s) to fit within the specified page dimensions</li>
+                <li><strong>Ignore border X:</strong> Allows left edge of shape 1 and right edge of shape 2 to extend beyond page borders for maximum material usage</li>
+                <li><strong>Single shape + fit to page:</strong> Scales one pattern to use the maximum page area</li>
+                <li><strong>Double shapes + fit to page:</strong> Optimizes overlap to fit two shapes with maximum efficiency</li>
+            </ul>
+            <p><strong>Tabs:</strong> Square tabs are automatically positioned on the inside or outside of corners based on the corner angle. Acute angles place tabs on the outside, obtuse angles place them on the inside for optimal folding.</p>
+            <p><strong>Result:</strong> The red path shows where to cut, and the shape can be wrapped around the cone to create a seamless helical covering.</p>
+        </div>
+    </div>
+
+    <script>
+        // Helper functions defined first
+        function translatePolygon(polygon, offsetX, offsetY) {
+            return polygon.map(p => ({
+                x: p.x + offsetX,
+                y: p.y + offsetY
+            }));
+        }
+
+        function getPolygonBounds(polygon) {
+            const xs = polygon.map(p => p.x);
+            const ys = polygon.map(p => p.y);
+            return {
+                minX: Math.min(...xs),
+                maxX: Math.max(...xs),
+                minY: Math.min(...ys),
+                maxY: Math.max(...ys)
+            };
+        }
+
+        function pointInPolygon(point, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                if (((polygon[i].y > point.y) !== (polygon[j].y > point.y)) &&
+                    (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        function shapesOverlap(poly1, poly2) {
+            // Check if any vertex of poly1 is inside poly2
+            for (let point of poly1) {
+                if (pointInPolygon(point, poly2)) {
+                    return true;
+                }
+            }
+            
+            // Check if any vertex of poly2 is inside poly1
+            for (let point of poly2) {
+                if (pointInPolygon(point, poly1)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Calculate distance between two points
+        function distance(p1, p2) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // Calculate angle at a vertex given three points
+        function calculateAngle(p1, vertex, p2) {
+            const v1x = p1.x - vertex.x;
+            const v1y = p1.y - vertex.y;
+            const v2x = p2.x - vertex.x;
+            const v2y = p2.y - vertex.y;
+            
+            const dot = v1x * v2x + v1y * v2y;
+            const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+            const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+            
+            const cosAngle = dot / (mag1 * mag2);
+            const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
+            return angleRad * 180 / Math.PI;
+        }
+
+        // Single shape fitting function - finds optimal overlap to fit page
+        function findOptimalOverlapForSingleShape(targetWidth, targetHeight, ignoreBorderX = false) {
+            let minOverlap = 0.1;   
+            let maxOverlap = 10.0;  
+            let bestResult = null;
+            
+            // Test if even smallest overlap fits
+            const minOverlapTest = canSingleShapeFit(minOverlap, targetWidth, targetHeight, ignoreBorderX);
+            if (!minOverlapTest || !minOverlapTest.fits) {
+                return { 
+                    overlap: null, 
+                    efficiency: 0,
+                    shapeWidth: 0,
+                    shapeHeight: 0,
+                    canFit: false
+                };
+            }
+            
+            // Binary search for maximum usable overlap
+            for (let iteration = 0; iteration < 50; iteration++) {
+                const midOverlap = (minOverlap + maxOverlap) / 2;
+                const result = canSingleShapeFit(midOverlap, targetWidth, targetHeight, ignoreBorderX);
+                
+                if (result && result.fits) {
+                    bestResult = {
+                        overlap: midOverlap,
+                        efficiency: result.efficiency,
+                        shapeWidth: result.shapeWidth,
+                        shapeHeight: result.shapeHeight
+                    };
+                    minOverlap = midOverlap;
+                } else {
+                    maxOverlap = midOverlap;
+                }
+                
+                if (maxOverlap - minOverlap < 0.001) {
+                    break;
+                }
+            }
+            
+            if (!bestResult) {
+                return { 
+                    overlap: null, 
+                    efficiency: 0,
+                    shapeWidth: 0,
+                    shapeHeight: 0,
+                    canFit: false
+                };
+            }
+            
+            return { 
+                overlap: bestResult.overlap, 
+                efficiency: bestResult.efficiency,
+                shapeWidth: bestResult.shapeWidth,
+                shapeHeight: bestResult.shapeHeight,
+                canFit: true
+            };
+        }
+
+        function canSingleShapeFit(overlap, targetWidth, targetHeight, ignoreBorderX = false) {
+            try {
+                const points = generateGeodesicPoints(-overlap);
+                
+                if (!points || points.length === 0) {
+                    return { fits: false, reason: 'no_points' };
+                }
+                
+                const polygon = getShapePolygon(points, -overlap, false);
+                if (!polygon || polygon.length === 0) {
+                    return { fits: false, reason: 'invalid_polygon' };
+                }
+                
+                const bounds = getPolygonBounds(polygon);
+                const shapeWidth = bounds.maxX - bounds.minX;
+                const shapeHeight = bounds.maxY - bounds.minY;
+                
+                if (ignoreBorderX) {
+                    // Only check height constraint, allow width to exceed
+                    if (shapeHeight > targetHeight) {
+                        return { fits: false, reason: 'too_large' };
+                    }
+                } else {
+                    // Check both width and height constraints
+                    if (shapeWidth > targetWidth || shapeHeight > targetHeight) {
+                        return { fits: false, reason: 'too_large' };
+                    }
+                }
+                
+                const efficiency = (shapeWidth * shapeHeight) / (targetWidth * targetHeight);
+                
+                return {
+                    fits: true,
+                    shapeWidth,
+                    shapeHeight,
+                    efficiency
+                };
+                
+            } catch (error) {
+                return { fits: false, reason: 'exception', error: error.message };
+            }
+        }
+
+        // Double shape fitting function with ignore border X option
+        function canShapesFit(overlap, targetWidth, targetHeight, ignoreBorderX = false) {
+            try {
+                const points = generateGeodesicPoints(-overlap);
+                
+                if (!points || points.length === 0) {
+                    return { fits: false, reason: 'no_points' };
+                }
+                
+                // Generate both shape polygons independently
+                const shape1Polygon = getShapePolygon(points, -overlap, false);  // Normal orientation
+                const shape2Polygon = getShapePolygon(points, -overlap, true);   // 180° rotated
+                
+                if (!shape1Polygon || !shape2Polygon || shape1Polygon.length === 0 || shape2Polygon.length === 0) {
+                    return { fits: false, reason: 'invalid_polygons' };
+                }
+                
+                // Calculate bounds for each shape
+                const shape1Bounds = getPolygonBounds(shape1Polygon);
+                const shape2Bounds = getPolygonBounds(shape2Polygon);
+                
+                const shape1Width = shape1Bounds.maxX - shape1Bounds.minX;
+                const shape1Height = shape1Bounds.maxY - shape1Bounds.minY;
+                const shape2Width = shape2Bounds.maxX - shape2Bounds.minX;
+                const shape2Height = shape2Bounds.maxY - shape2Bounds.minY;
+                
+                // Position shapes correctly:
+                // Shape 1: Top-right corner (right edge at pageWidth, top edge at 0)
+                const shape1OffsetX = targetWidth - shape1Width;
+                const shape1OffsetY = 0;
+                
+                const shape1Final = translatePolygon(shape1Polygon, shape1OffsetX - shape1Bounds.minX, shape1OffsetY - shape1Bounds.minY);
+                
+                // Shape 2: Bottom-left corner (left edge at 0, bottom edge at pageHeight)
+                const shape2OffsetX = 0;
+                const shape2OffsetY = targetHeight - shape2Height;
+                
+                const shape2Final = translatePolygon(shape2Polygon, shape2OffsetX - shape2Bounds.minX, shape2OffsetY - shape2Bounds.minY);
+                
+                // Check if any part of either shape extends outside the page bounds
+                const shape1FinalBounds = getPolygonBounds(shape1Final);
+                const shape2FinalBounds = getPolygonBounds(shape2Final);
+                
+                let shape1OutOfBounds, shape2OutOfBounds;
+                
+                if (ignoreBorderX) {
+                    // Allow left edge of shape1 and right edge of shape2 to extend beyond borders
+                    shape1OutOfBounds = shape1FinalBounds.maxX > targetWidth ||
+                                      shape1FinalBounds.minY < 0 || shape1FinalBounds.maxY > targetHeight;
+                    shape2OutOfBounds = shape2FinalBounds.minX < 0 ||
+                                      shape2FinalBounds.minY < 0 || shape2FinalBounds.maxY > targetHeight;
+                } else {
+                    // Normal bounds checking
+                    shape1OutOfBounds = shape1FinalBounds.minX < 0 || shape1FinalBounds.maxX > targetWidth ||
+                                      shape1FinalBounds.minY < 0 || shape1FinalBounds.maxY > targetHeight;
+                    shape2OutOfBounds = shape2FinalBounds.minX < 0 || shape2FinalBounds.maxX > targetWidth ||
+                                      shape2FinalBounds.minY < 0 || shape2FinalBounds.maxY > targetHeight;
+                }
+                
+                if (shape1OutOfBounds || shape2OutOfBounds) {
+                    return { fits: false, reason: 'page_bounds' };
+                }
+                
+                // Check if shapes overlap geometrically
+                const overlaps = shapesOverlap(shape1Final, shape2Final);
+                if (overlaps) {
+                    return { fits: false, reason: 'overlap' };
+                }
+                
+                // Calculate efficiency based on both shapes
+                const totalShapeArea = shape1Width * shape1Height + shape2Width * shape2Height;
+                const efficiency = totalShapeArea / (targetWidth * targetHeight);
+                
+                return { 
+                    fits: true, 
+                    shapeWidth: Math.max(shape1Width, shape2Width),
+                    shapeHeight: Math.max(shape1Height, shape2Height),
+                    efficiency
+                };
+                
+            } catch (error) {
+                return { fits: false, reason: 'exception', error: error.message };
+            }
+        }
+
+        function findOptimalOverlapForDoubleShape(targetWidth, targetHeight, ignoreBorderX = false) {
+            let minOverlap = 1.0;   
+            let maxOverlap = 10.0;  
+            let bestResult = null;
+            
+            // Test if even smallest shapes fit
+            const minOverlapTest = canShapesFit(minOverlap, targetWidth, targetHeight, ignoreBorderX);
+            if (!minOverlapTest || !minOverlapTest.fits) {
+                return { 
+                    overlap: null, 
+                    efficiency: 0,
+                    totalWidth: 0,
+                    totalHeight: 0,
+                    canFit: false
+                };
+            }
+            
+            // Binary search for maximum usable overlap
+            for (let iteration = 0; iteration < 50; iteration++) {
+                const midOverlap = (minOverlap + maxOverlap) / 2;
+                const result = canShapesFit(midOverlap, targetWidth, targetHeight, ignoreBorderX);
+                
+                if (result && result.fits) {
+                    bestResult = {
+                        overlap: midOverlap,
+                        efficiency: result.efficiency,
+                        shapeWidth: result.shapeWidth,
+                        shapeHeight: result.shapeHeight
+                    };
+                    minOverlap = midOverlap;
+                } else {
+                    maxOverlap = midOverlap;
+                }
+                
+                if (maxOverlap - minOverlap < 0.001) {
+                    break;
+                }
+            }
+            
+            if (!bestResult) {
+                return { 
+                    overlap: null, 
+                    efficiency: 0,
+                    totalWidth: 0,
+                    totalHeight: 0,
+                    canFit: false
+                };
+            }
+            
+            return { 
+                overlap: bestResult.overlap, 
+                efficiency: bestResult.efficiency,
+                totalWidth: bestResult.shapeWidth,
+                totalHeight: bestResult.shapeHeight * 2,
+                canFit: true
+            };
+        }
+
+        // Rest of the code continues...
+        let canvas, ctx;
+        let mouseDown = false;
+        let mouseX = 0, mouseY = 0;
+        let rotationY = 0;
+        let scale = 1;
+        let geodesicPoints = [];
+        
+        function init3D() {
+            canvas = document.getElementById('canvas3D');
+            ctx = canvas.getContext('2d');
+            
+            canvas.addEventListener('mousedown', (e) => {
+                mouseDown = true;
+                mouseX = e.offsetX;
+                mouseY = e.offsetY;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!mouseDown) return;
+                
+                const deltaX = e.offsetX - mouseX;
+                rotationY += deltaX * 0.01;
+                
+                mouseX = e.offsetX;
+                mouseY = e.offsetY;
+                
+                draw3D();
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                mouseDown = false;
+            });
+        }
+        
+        function projectOrtho(x, y, z) {
+            const cosY = Math.cos(rotationY);
+            const sinY = Math.sin(rotationY);
+            
+            const x2 = x * cosY + z * sinY;
+            const z2 = -x * sinY + z * cosY;
+            
+            const screenX = canvas.width / 2 + x2 * scale;
+            const screenY = canvas.height - 50 - y * scale;
+            
+            return { x: screenX, y: screenY, z: z2 };
+        }
+        
+        function draw3D() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const bottomDiameter = parseFloat(document.getElementById('bottomDiameter').value);
+            const topDiameter = parseFloat(document.getElementById('topDiameter').value);
+            const height = parseFloat(document.getElementById('height').value);
+            
+            const r1 = bottomDiameter / 2;
+            const r2 = topDiameter / 2;
+            
+            const maxRadius = Math.max(r1, r2);
+            const coneWidth = maxRadius * 2;
+            const coneHeight = height;
+            
+            const padding = 30;
+            const availableWidth = canvas.width - 2 * padding;
+            const availableHeight = canvas.height - 2 * padding;
+            
+            const scaleX = availableWidth / coneWidth;
+            const scaleY = availableHeight / coneHeight;
+            scale = Math.min(scaleX, scaleY) * 0.8;
+            
+            // Draw cone outline
+            const numPoints = 32;
+            let leftEdge = [];
+            let rightEdge = [];
+            
+            for (let i = 0; i <= 10; i++) {
+                const t = i / 10;
+                const y = height * t;
+                const radius = r1 + (r2 - r1) * t;
+                
+                let minX = Infinity, maxX = -Infinity;
+                let minPoint = null, maxPoint = null;
+                
+                for (let j = 0; j < numPoints; j++) {
+                    const angle = (j / numPoints) * 2 * Math.PI;
+                    const x = radius * Math.cos(angle);
+                    const z = radius * Math.sin(angle);
+                    const projected = projectOrtho(x, y, z);
+                    
+                    if (projected.x < minX) {
+                        minX = projected.x;
+                        minPoint = projected;
+                    }
+                    if (projected.x > maxX) {
+                        maxX = projected.x;
+                        maxPoint = projected;
+                    }
+                }
+                
+                leftEdge.push(minPoint);
+                rightEdge.push(maxPoint);
+            }
+            
+            // Draw left edge
+            ctx.beginPath();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.moveTo(leftEdge[0].x, leftEdge[0].y);
+            for (let i = 1; i < leftEdge.length; i++) {
+                ctx.lineTo(leftEdge[i].x, leftEdge[i].y);
+            }
+            ctx.stroke();
+            
+            // Draw right edge
+            ctx.beginPath();
+            ctx.moveTo(rightEdge[0].x, rightEdge[0].y);
+            for (let i = 1; i < rightEdge.length; i++) {
+                ctx.lineTo(rightEdge[i].x, rightEdge[i].y);
+            }
+            ctx.stroke();
+            
+            // Draw ellipses
+            const numEllipsePoints = 64;
+            
+            // Bottom ellipse
+            ctx.beginPath();
+            for (let i = 0; i <= numEllipsePoints; i++) {
+                const angle = (i / numEllipsePoints) * 2 * Math.PI;
+                const x = r1 * Math.cos(angle);
+                const z = r1 * Math.sin(angle);
+                const projected = projectOrtho(x, 0, z);
+                
+                if (i === 0) {
+                    ctx.moveTo(projected.x, projected.y);
+                } else {
+                    ctx.lineTo(projected.x, projected.y);
+                }
+            }
+            ctx.stroke();
+            
+            // Top ellipse
+            ctx.beginPath();
+            for (let i = 0; i <= numEllipsePoints; i++) {
+                const angle = (i / numEllipsePoints) * 2 * Math.PI;
+                const x = r2 * Math.cos(angle);
+                const z = r2 * Math.sin(angle);
+                const projected = projectOrtho(x, height, z);
+                
+                if (i === 0) {
+                    ctx.moveTo(projected.x, projected.y);
+                } else {
+                    ctx.lineTo(projected.x, projected.y);
+                }
+            }
+            ctx.stroke();
+            
+            // Draw reference lines
+            const numLines = 5;
+            for (let i = 1; i < numLines; i++) {
+                const t = i / numLines;
+                const y = height * t;
+                const radius = r1 + (r2 - r1) * t;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                
+                for (let j = 0; j <= numEllipsePoints; j++) {
+                    const angle = (j / numEllipsePoints) * 2 * Math.PI;
+                    const x = radius * Math.cos(angle);
+                    const z = radius * Math.sin(angle);
+                    const projected = projectOrtho(x, y, z);
+                    
+                    if (j === 0) {
+                        ctx.moveTo(projected.x, projected.y);
+                    } else {
+                        ctx.lineTo(projected.x, projected.y);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // Draw geodesic path
+            if (geodesicPoints.length > 0) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#FF4444';
+                ctx.lineWidth = 3;
+                
+                for (let i = 0; i < geodesicPoints.length; i++) {
+                    const point = geodesicPoints[i];
+                    const x = point.radius * Math.cos(point.theta);
+                    const z = point.radius * Math.sin(point.theta);
+                    const projected = projectOrtho(x, point.height, z);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(projected.x, projected.y);
+                    } else {
+                        ctx.lineTo(projected.x, projected.y);
+                    }
+                }
+                ctx.stroke();
+                
+                // Draw start and end points
+                const startPoint = geodesicPoints[0];
+                const endPoint = geodesicPoints[geodesicPoints.length - 1];
+                
+                const startX = startPoint.radius * Math.cos(startPoint.theta);
+                const startZ = startPoint.radius * Math.sin(startPoint.theta);
+                const startProjected = projectOrtho(startX, startPoint.height, startZ);
+                
+                const endX = endPoint.radius * Math.cos(endPoint.theta);
+                const endZ = endPoint.radius * Math.sin(endPoint.theta);
+                const endProjected = projectOrtho(endX, endPoint.height, endZ);
+                
+                // Start point (green)
+                ctx.beginPath();
+                ctx.fillStyle = '#4CAF50';
+                ctx.arc(startProjected.x, startProjected.y, 6, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // End point (blue)
+                ctx.beginPath();
+                ctx.fillStyle = '#2196F3';
+                ctx.arc(endProjected.x, endProjected.y, 6, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            // Add center axis
+            ctx.beginPath();
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            const centerBottom = projectOrtho(0, 0, 0);
+            const centerTop = projectOrtho(0, height, 0);
+            ctx.moveTo(centerBottom.x, centerBottom.y);
+            ctx.lineTo(centerTop.x, centerTop.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        function generateGeodesicPoints(overlapFactor) {
+            const bottomDiameter = parseFloat(document.getElementById('bottomDiameter').value);
+            const topDiameter = parseFloat(document.getElementById('topDiameter').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const startAngleDeg = parseFloat(document.getElementById('startAngle').value);
+            
+            const r1 = bottomDiameter / 2;
+            const r2 = topDiameter / 2;
+            const startAngleRad = startAngleDeg * Math.PI / 180;
+            
+            const initialCircumference = 2 * Math.PI * r1;
+            const effectiveTapeWidth = initialCircumference * Math.tan(startAngleRad);
+            
+            const numPoints = 200;
+            const points = [];
+            
+            let currentTheta = 0;
+            
+            for (let i = 0; i < numPoints; i++) {
+                const t = i / (numPoints - 1);
+                const currentHeight = t * height;
+                const currentRadius = r1 + (r2 - r1) * t;
+                const currentCircumference = 2 * Math.PI * currentRadius;
+                
+                const localAngle = Math.atan(effectiveTapeWidth / currentCircumference);
+                
+                if (i > 0) {
+                    const prevHeight = points[i-1].height;
+                    const dh = currentHeight - prevHeight;
+                    const dTheta = (dh * Math.tan(localAngle)) / currentRadius;
+                    currentTheta += dTheta;
+                }
+                
+                points.push({
+                    height: currentHeight,
+                    theta: currentTheta,
+                    radius: currentRadius,
+                    circumference: currentCircumference,
+                    arcLength: 0,
+                    tapeAngle: localAngle
+                });
+            }
+            
+            // Calculate arc lengths
+            let totalLength = 0;
+            for (let i = 0; i < points.length; i++) {
+                if (i > 0) {
+                    const prev = points[i-1];
+                    const curr = points[i];
+                    
+                    const x1 = prev.radius * Math.cos(prev.theta);
+                    const y1 = prev.height;
+                    const z1 = prev.radius * Math.sin(prev.theta);
+                    
+                    const x2 = curr.radius * Math.cos(curr.theta);
+                    const y2 = curr.height;
+                    const z2 = curr.radius * Math.sin(curr.theta);
+                    
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    const dz = z2 - z1;
+                    
+                    const segmentLength = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    totalLength += segmentLength;
+                }
+                points[i].arcLength = totalLength;
+            }
+            
+            return points;
+        }
+        
+        function calculateShapeBounds(points, overlapFactor) {
+            let minX = 0, maxX = 0, minY = 0, maxY = 0;
+            
+            if (points.length === 0) return { minX: 0, maxX: 100, minY: 0, maxY: 100 };
+            
+            const totalLength = points[points.length - 1].arcLength;
+            maxX = totalLength;
+            
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                const x = point.arcLength;
+                const unwrappedAngle = Math.PI/2 - point.tapeAngle;
+                const circumferenceLength = point.circumference * overlapFactor;
+                
+                const upperX = x + circumferenceLength * Math.cos(unwrappedAngle);
+                const upperY = -circumferenceLength * Math.sin(unwrappedAngle);
+                
+                minX = Math.min(minX, x, upperX);
+                maxX = Math.max(maxX, x, upperX);
+                minY = Math.min(minY, 0, upperY);
+                maxY = Math.max(maxY, 0, upperY);
+            }
+            
+            return { minX, maxX, minY, maxY };
+        }
+        
+        function getShapePolygon(points, overlapFactor, rotated180 = false) {
+            const polygon = [];
+            
+            // Bottom edge (left to right)
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                polygon.push({
+                    x: point.arcLength,
+                    y: 0
+                });
+            }
+            
+            // Top edge (right to left)
+            for (let i = points.length - 1; i >= 0; i--) {
+                const point = points[i];
+                const unwrappedAngle = Math.PI/2 - point.tapeAngle;
+                const circumferenceLength = point.circumference * overlapFactor;
+                
+                const upperX = point.arcLength + circumferenceLength * Math.cos(unwrappedAngle);
+                const upperY = -circumferenceLength * Math.sin(unwrappedAngle);
+                
+                polygon.push({
+                    x: upperX,
+                    y: upperY
+                });
+            }
+            
+            // If we want the 180° rotated version, rotate the entire polygon
+            if (rotated180) {
+                const bounds = getPolygonBounds(polygon);
+                const centerX = (bounds.minX + bounds.maxX) / 2;
+                const centerY = (bounds.minY + bounds.maxY) / 2;
+                
+                return polygon.map(p => ({
+                    x: 2 * centerX - p.x,
+                    y: 2 * centerY - p.y
+                }));
+            }
+            
+            return polygon;
+        }
+
+        function addCornerLabels(svg, polygon, offsetX, offsetY, scale) {
+            if (polygon.length < 4) return;
+            
+            const svgNS = 'http://www.w3.org/2000/svg';
+            
+            // The polygon is created with bottom edge first, then top edge in reverse
+            // So we need to find the actual 4 corners of this quadrilateral
+            const numPoints = polygon.length;
+            const halfPoints = Math.floor(numPoints / 2);
+            
+            // The 4 corners are:
+            // 0: Start of bottom edge (bottom-left)
+            // halfPoints-1: End of bottom edge (bottom-right) 
+            // halfPoints: Start of top edge in reverse = end of top edge (top-right)
+            // numPoints-1: End of top edge in reverse = start of top edge (top-left)
+            const cornerIndices = [0, halfPoints - 1, halfPoints, numPoints - 1];
+            
+            const corners = cornerIndices.map(i => ({
+                x: offsetX + polygon[i].x * scale,
+                y: offsetY + polygon[i].y * scale
+            }));
+            
+            // Calculate distances between adjacent corners
+            const distances = [];
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                const dist = distance(corners[i], corners[next]) / scale; // Convert back to mm
+                distances.push(dist);
+            }
+            
+            // Calculate angles at each corner
+            const angles = [];
+            for (let i = 0; i < 4; i++) {
+                const prev = (i + 3) % 4;
+                const next = (i + 1) % 4;
+                const angle = calculateAngle(corners[prev], corners[i], corners[next]);
+                angles.push(angle);
+            }
+            
+            // Add distance labels between corners
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                const midX = (corners[i].x + corners[next].x) / 2;
+                const midY = (corners[i].y + corners[next].y) / 2;
+                
+                // Calculate perpendicular offset for label positioning
+                const dx = corners[next].x - corners[i].x;
+                const dy = corners[next].y - corners[i].y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const offsetDistance = 15;
+                const perpX = -dy / length * offsetDistance;
+                const perpY = dx / length * offsetDistance;
+                
+                const labelX = midX + perpX;
+                const labelY = midY + perpY;
+                
+                // Distance label
+                const distLabel = document.createElementNS(svgNS, 'text');
+                distLabel.setAttribute('x', labelX);
+                distLabel.setAttribute('y', labelY);
+                distLabel.setAttribute('text-anchor', 'middle');
+                distLabel.setAttribute('font-size', '10px');
+                distLabel.setAttribute('font-weight', 'bold');
+                distLabel.setAttribute('fill', '#006600');
+                distLabel.setAttribute('stroke', 'white');
+                distLabel.setAttribute('stroke-width', '2');
+                distLabel.setAttribute('paint-order', 'stroke');
+                distLabel.textContent = `${distances[i].toFixed(1)}mm`;
+                svg.appendChild(distLabel);
+            }
+            
+            // Add angle labels at corners
+            for (let i = 0; i < 4; i++) {
+                const corner = corners[i];
+                
+                // Position angle label near corner with adaptive offset
+                const offsetDistance = 25;
+                let labelX = corner.x;
+                let labelY = corner.y;
+                
+                // Determine offset direction based on corner position relative to shape center
+                const bounds = getPolygonBounds(polygon.map(p => ({x: offsetX + p.x * scale, y: offsetY + p.y * scale})));
+                const centerX = (bounds.minX + bounds.maxX) / 2;
+                const centerY = (bounds.minY + bounds.maxY) / 2;
+                
+                const towardsCenterX = centerX - corner.x;
+                const towardsCenterY = centerY - corner.y;
+                const centerLength = Math.sqrt(towardsCenterX * towardsCenterX + towardsCenterY * towardsCenterY);
+                
+                // Offset away from center
+                labelX -= (towardsCenterX / centerLength) * offsetDistance;
+                labelY -= (towardsCenterY / centerLength) * offsetDistance;
+                
+                // Angle label
+                const angleLabel = document.createElementNS(svgNS, 'text');
+                angleLabel.setAttribute('x', labelX);
+                angleLabel.setAttribute('y', labelY);
+                angleLabel.setAttribute('text-anchor', 'middle');
+                angleLabel.setAttribute('font-size', '10px');
+                angleLabel.setAttribute('font-weight', 'bold');
+                angleLabel.setAttribute('fill', '#CC3300');
+                angleLabel.setAttribute('stroke', 'white');
+                angleLabel.setAttribute('stroke-width', '2');
+                angleLabel.setAttribute('paint-order', 'stroke');
+                angleLabel.textContent = `${angles[i].toFixed(1)}°`;
+                svg.appendChild(angleLabel);
+                
+                // Add small circle to mark corner
+                const cornerMarker = document.createElementNS(svgNS, 'circle');
+                cornerMarker.setAttribute('cx', corner.x);
+                cornerMarker.setAttribute('cy', corner.y);
+                cornerMarker.setAttribute('r', '3');
+                cornerMarker.setAttribute('fill', '#FF4444');
+                cornerMarker.setAttribute('stroke', 'white');
+                cornerMarker.setAttribute('stroke-width', '1');
+                svg.appendChild(cornerMarker);
+            }
+        }
+        
+        function updateVisualization() {
+            const makeDouble = document.getElementById('makeDouble').checked;
+            const fitToPage = document.getElementById('fitToPage').checked;
+            const ignoreBorderX = document.getElementById('ignoreBorderX').checked;
+            const overlapInput = document.getElementById('overlap');
+            const overlapHint = document.getElementById('overlapHint');
+            
+            let overlapFactor;
+            let canFitOnPage = true;
+            
+            if (makeDouble && fitToPage) {
+                // Double shapes with page fitting - optimize overlap
+                const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+                const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+                
+                const result = findOptimalOverlapForDoubleShape(pageWidth, pageHeight, ignoreBorderX);
+                
+                if (result.canFit) {
+                    overlapFactor = result.overlap;
+                    overlapInput.value = overlapFactor.toFixed(2);
+                    
+                    const efficiencyInfo = document.getElementById('efficiencyInfo');
+                    efficiencyInfo.style.display = 'block';
+                    efficiencyInfo.style.backgroundColor = '#d4edda';
+                    efficiencyInfo.style.borderColor = '#c3e6cb';
+                    efficiencyInfo.style.color = '#155724';
+                    
+                    const borderNote = ignoreBorderX ? '<br><em>Left/right borders ignored for maximum efficiency</em>' : '';
+                    efficiencyInfo.innerHTML = `
+                        <strong>Double Shapes - Page Fitting Results:</strong><br>
+                        Optimized overlap factor: ${overlapFactor.toFixed(2)}<br>
+                        Material efficiency: ${(result.efficiency * 100).toFixed(1)}%${borderNote}
+                    `;
+                } else {
+                    overlapFactor = parseFloat(overlapInput.value);
+                    canFitOnPage = false;
+                    
+                    const efficiencyInfo = document.getElementById('efficiencyInfo');
+                    efficiencyInfo.style.display = 'block';
+                    efficiencyInfo.style.backgroundColor = '#f8d7da';
+                    efficiencyInfo.style.borderColor = '#f5c6cb';
+                    efficiencyInfo.style.color = '#721c24';
+                    const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+                    const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+                    
+                    const borderNote = ignoreBorderX ? ' (even with border ignore)' : '';
+                    efficiencyInfo.innerHTML = `
+                        <strong>Cannot Fit Double Shapes on Page:</strong><br>
+                        No overlap factor can make two shapes fit on ${pageWidth}×${pageHeight}mm page${borderNote}.<br>
+                        Using manual overlap factor: ${overlapFactor.toFixed(2)}<br>
+                        <em>Try a larger page size or smaller cone dimensions.</em>
+                    `;
+                }
+                
+                overlapInput.readOnly = true;
+                overlapHint.textContent = ignoreBorderX ? 'Auto-calculated (border X ignored)' : 'Auto-calculated for double shapes';
+                
+            } else if (!makeDouble && fitToPage) {
+                // Single shape with page fitting - optimize overlap to fit page
+                const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+                const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+                
+                const result = findOptimalOverlapForSingleShape(pageWidth, pageHeight, ignoreBorderX);
+                
+                if (result.canFit) {
+                    overlapFactor = result.overlap;
+                    overlapInput.value = overlapFactor.toFixed(2);
+                    
+                    const efficiencyInfo = document.getElementById('efficiencyInfo');
+                    efficiencyInfo.style.display = 'block';
+                    efficiencyInfo.style.backgroundColor = '#d4edda';
+                    efficiencyInfo.style.borderColor = '#c3e6cb';
+                    efficiencyInfo.style.color = '#155724';
+                    
+                    const borderNote = ignoreBorderX ? '<br><em>X borders ignored for maximum efficiency</em>' : '';
+                    efficiencyInfo.innerHTML = `
+                        <strong>Single Shape - Page Fitting Results:</strong><br>
+                        Optimized overlap factor: ${overlapFactor.toFixed(2)}<br>
+                        Shape size: ${result.shapeWidth.toFixed(1)}×${result.shapeHeight.toFixed(1)}mm<br>
+                        Material efficiency: ${(result.efficiency * 100).toFixed(1)}%${borderNote}
+                    `;
+                } else {
+                    overlapFactor = parseFloat(overlapInput.value);
+                    canFitOnPage = false;
+                    
+                    const efficiencyInfo = document.getElementById('efficiencyInfo');
+                    efficiencyInfo.style.display = 'block';
+                    efficiencyInfo.style.backgroundColor = '#f8d7da';
+                    efficiencyInfo.style.borderColor = '#f5c6cb';
+                    efficiencyInfo.style.color = '#721c24';
+                    
+                    const borderNote = ignoreBorderX ? ' (even with border X ignore)' : '';
+                    efficiencyInfo.innerHTML = `
+                        <strong>Cannot Fit Single Shape on Page:</strong><br>
+                        No overlap factor can make shape fit on ${pageWidth}×${pageHeight}mm page${borderNote}.<br>
+                        Using manual overlap factor: ${overlapFactor.toFixed(2)}<br>
+                        <em>Try a larger page size or smaller cone dimensions.</em>
+                    `;
+                }
+                
+                overlapInput.readOnly = true;
+                overlapHint.textContent = ignoreBorderX ? 'Auto-calculated (border X ignored)' : 'Auto-calculated for page fitting';
+                
+            } else {
+                // Manual mode (no page fitting)
+                overlapFactor = parseFloat(overlapInput.value);
+                document.getElementById('efficiencyInfo').style.display = 'none';
+                overlapInput.readOnly = false;
+                overlapHint.textContent = 'Manual control';
+            }
+            
+            geodesicPoints = generateGeodesicPoints(-overlapFactor);
+            draw3D();
+            
+            const svg = document.getElementById('svgCanvas');
+            svg.innerHTML = '';
+            
+            const addStartTab = document.getElementById('startTab').checked;
+            const addEndTab = document.getElementById('endTab').checked;
+            const tabWidth = parseFloat(document.getElementById('tabWidth').value);
+            
+            if (makeDouble) {
+                drawDoubleShape(svg, geodesicPoints, -overlapFactor, addStartTab, addEndTab, tabWidth, canFitOnPage, fitToPage, ignoreBorderX);
+            } else {
+                drawSingleShape(svg, geodesicPoints, -overlapFactor, addStartTab, addEndTab, tabWidth, fitToPage, ignoreBorderX);
+            }
+        }
+        
+        function drawSingleShape(svg, points, overlapFactor, addStartTab, addEndTab, tabWidth, fitToPage = false, ignoreBorderX = false) {
+            if (points.length === 0) return;
+            
+            const svgWidth = 1200;
+            const svgHeight = 600;
+            const labelSpace = 100;
+            const padding = 40;
+            
+            // Generate the polygon for the shape
+            const polygon = getShapePolygon(points, overlapFactor, false);
+            const bounds = getPolygonBounds(polygon);
+            
+            const shapeWidth = bounds.maxX - bounds.minX;
+            const shapeHeight = bounds.maxY - bounds.minY;
+            
+            let scale2D, offsetX, offsetY;
+            
+            if (fitToPage) {
+                // Show page outline and position shape within it
+                const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+                const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+                
+                // Calculate SVG display scale to show the page
+                const svgScale = Math.min(svgWidth / pageWidth, (svgHeight - labelSpace) / pageHeight) * 0.8;
+                
+                const pageDisplayWidth = pageWidth * svgScale;
+                const pageDisplayHeight = pageHeight * svgScale;
+                const pageLeft = (svgWidth - pageDisplayWidth) / 2;
+                const pageTop = (svgHeight - labelSpace - pageDisplayHeight) / 2;
+                
+                // Check if shape actually fits on page
+                let shapeFits;
+                if (ignoreBorderX) {
+                    shapeFits = shapeHeight <= pageHeight; // Only check height
+                } else {
+                    shapeFits = shapeWidth <= pageWidth && shapeHeight <= pageHeight;
+                }
+                
+                // Draw page outline
+                const pageOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                pageOutline.setAttribute('x', pageLeft);
+                pageOutline.setAttribute('y', pageTop);
+                pageOutline.setAttribute('width', pageDisplayWidth);
+                pageOutline.setAttribute('height', pageDisplayHeight);
+                pageOutline.setAttribute('fill', 'none');
+                pageOutline.setAttribute('stroke', shapeFits ? '#999' : '#ff4444');
+                pageOutline.setAttribute('stroke-width', shapeFits ? '2' : '3');
+                pageOutline.setAttribute('stroke-dasharray', '5,5');
+                svg.appendChild(pageOutline);
+                
+                // Position shape at top-right corner of page (like double shape mode)
+                // Right edge of shape aligns with right edge of page, top edge aligns with top edge of page
+                offsetX = pageLeft + pageDisplayWidth - (bounds.maxX * svgScale);
+                offsetY = pageTop - (bounds.minY * svgScale);
+                
+                scale2D = svgScale;
+                
+                // Draw border extension indicators if ignoreBorderX is enabled and shape extends beyond borders
+                if (ignoreBorderX && shapeWidth > pageWidth) {
+                    const shapeLeft = offsetX + bounds.minX * svgScale;
+                    const shapeRight = offsetX + bounds.maxX * svgScale;
+                    
+                    // Left border extension
+                    if (shapeLeft < pageLeft) {
+                        const extensionLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        extensionLine.setAttribute('x1', shapeLeft);
+                        extensionLine.setAttribute('y1', pageTop);
+                        extensionLine.setAttribute('x2', shapeLeft);
+                        extensionLine.setAttribute('y2', pageTop + pageDisplayHeight);
+                        extensionLine.setAttribute('stroke', '#ff6b6b');
+                        extensionLine.setAttribute('stroke-width', '3');
+                        extensionLine.setAttribute('stroke-dasharray', '10,5');
+                        svg.appendChild(extensionLine);
+                    }
+                    
+                    // Right border extension line is not needed since we align to right edge
+                }
+                
+            } else {
+                // Standard view - fit to SVG canvas
+                const availableWidth = svgWidth - 2 * padding;
+                const availableHeight = svgHeight - labelSpace - 2 * padding;
+                
+                const scaleX = availableWidth / shapeWidth;
+                const scaleY = availableHeight / shapeHeight;
+                scale2D = Math.min(scaleX, scaleY, 3);
+                
+                const scaledWidth = shapeWidth * scale2D;
+                const scaledHeight = shapeHeight * scale2D;
+                
+                offsetX = (svgWidth - scaledWidth) / 2 - bounds.minX * scale2D;
+                offsetY = padding - bounds.minY * scale2D;
+            }
+            
+            // Draw the actual shape polygon
+            let shapeColor;
+            if (fitToPage) {
+                if (ignoreBorderX) {
+                    shapeColor = (shapeHeight > parseFloat(document.getElementById('pageHeight').value)) ? '#ff8888' : '#FF4444';
+                } else {
+                    shapeColor = (shapeWidth > parseFloat(document.getElementById('pageWidth').value) || 
+                                 shapeHeight > parseFloat(document.getElementById('pageHeight').value)) ? '#ff8888' : '#FF4444';
+                }
+            } else {
+                shapeColor = '#FF4444';
+            }
+            
+            drawPolygonAtPosition(svg, polygon, offsetX, offsetY, scale2D, shapeColor, null);
+            
+            // Add corner labels for distance and angles
+            addCornerLabels(svg, polygon, offsetX, offsetY, scale2D);
+            
+            // Add tabs if enabled
+            if (addStartTab || addEndTab) {
+                drawTabs(svg, points, overlapFactor, offsetX, offsetY, scale2D, addStartTab, addEndTab, tabWidth);
+            }
+            
+            const totalLength = points[points.length - 1].arcLength;
+            
+            if (fitToPage) {
+                const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+                const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+                let shapeFits, statusText;
+                
+                if (ignoreBorderX) {
+                    shapeFits = shapeHeight <= pageHeight;
+                    statusText = shapeFits ? 'FITS WITH BORDER X IGNORE' : 'TOO TALL FOR PAGE';
+                } else {
+                    shapeFits = shapeWidth <= pageWidth && shapeHeight <= pageHeight;
+                    statusText = shapeFits ? 'FITS ON PAGE' : 'TOO LARGE FOR PAGE';
+                }
+                
+                const statusColor = shapeFits ? '#333' : '#ff4444';
+                
+                addLabel(svg, svgWidth / 2, svgHeight - 50, `Single shape on ${pageWidth}×${pageHeight}mm page - ${statusText}`, 'bold', '14px', statusColor);
+                addLabel(svg, svgWidth / 2, svgHeight - 30, `Shape size: ${shapeWidth.toFixed(1)}×${shapeHeight.toFixed(1)}mm, Length: ${totalLength.toFixed(1)}mm`);
+            } else {
+                addLabel(svg, svgWidth / 2, svgHeight - 50, `Geodesic length: ${totalLength.toFixed(1)}mm`);
+                addLabel(svg, svgWidth / 2, svgHeight - 30, `Pattern Size: ${shapeWidth.toFixed(1)}mm × ${shapeHeight.toFixed(1)}mm`, 'bold');
+            }
+        }
+
+        function drawTabs(svg, points, overlapFactor, offsetX, offsetY, scale, addStartTab, addEndTab, tabWidth) {
+            const svgNS = 'http://www.w3.org/2000/svg';
+            
+            if (addStartTab && points.length > 0) {
+                // Start tab at beginning
+                const startPoint = points[0];
+                const startX = (offsetX + startPoint.arcLength * scale);
+                const startY = (offsetY + 0 * scale);
+                
+                const tab = document.createElementNS(svgNS, 'rect');
+                tab.setAttribute('x', startX - tabWidth * scale / 2);
+                tab.setAttribute('y', startY - tabWidth * scale);
+                tab.setAttribute('width', tabWidth * scale);
+                tab.setAttribute('height', tabWidth * scale);
+                tab.setAttribute('fill', 'rgba(255, 68, 68, 0.3)');
+                tab.setAttribute('stroke', '#FF4444');
+                tab.setAttribute('stroke-width', '1');
+                svg.appendChild(tab);
+            }
+            
+            if (addEndTab && points.length > 0) {
+                // End tab at end
+                const endPoint = points[points.length - 1];
+                const endX = (offsetX + endPoint.arcLength * scale);
+                const endY = (offsetY + 0 * scale);
+                
+                const tab = document.createElementNS(svgNS, 'rect');
+                tab.setAttribute('x', endX - tabWidth * scale / 2);
+                tab.setAttribute('y', endY - tabWidth * scale);
+                tab.setAttribute('width', tabWidth * scale);
+                tab.setAttribute('height', tabWidth * scale);
+                tab.setAttribute('fill', 'rgba(255, 68, 68, 0.3)');
+                tab.setAttribute('stroke', '#FF4444');
+                tab.setAttribute('stroke-width', '1');
+                svg.appendChild(tab);
+            }
+        }
+
+        function drawDoubleShape(svg, points, overlapFactor, addStartTab, addEndTab, tabWidth, canFitOnPage = true, fitToPage = false, ignoreBorderX = false) {
+            const pageWidth = parseFloat(document.getElementById('pageWidth').value);
+            const pageHeight = parseFloat(document.getElementById('pageHeight').value);
+            
+            const shape1Polygon = getShapePolygon(points, overlapFactor, false);
+            const shape2Polygon = getShapePolygon(points, overlapFactor, true);
+            
+            const shape1Bounds = getPolygonBounds(shape1Polygon);
+            const shape2Bounds = getPolygonBounds(shape2Polygon);
+            
+            const shapeWidth = shape1Bounds.maxX - shape1Bounds.minX;
+            const shapeHeight = shape1Bounds.maxY - shape1Bounds.minY;
+            
+            const svgWidth = 1200;
+            const svgHeight = 600;
+            
+            let svgScale, pageLeft, pageTop, pageDisplayWidth, pageDisplayHeight;
+            
+            if (fitToPage) {
+                // Show page outline when fitting to page
+                svgScale = Math.min(svgWidth / pageWidth, (svgHeight - 100) / pageHeight) * 0.8;
+                
+                pageDisplayWidth = pageWidth * svgScale;
+                pageDisplayHeight = pageHeight * svgScale;
+                pageLeft = (svgWidth - pageDisplayWidth) / 2;
+                pageTop = (svgHeight - 100 - pageDisplayHeight) / 2;
+                
+                const pageOutline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                pageOutline.setAttribute('x', pageLeft);
+                pageOutline.setAttribute('y', pageTop);
+                pageOutline.setAttribute('width', pageDisplayWidth);
+                pageOutline.setAttribute('height', pageDisplayHeight);
+                pageOutline.setAttribute('fill', 'none');
+                pageOutline.setAttribute('stroke', canFitOnPage ? '#999' : '#ff4444');
+                pageOutline.setAttribute('stroke-width', canFitOnPage ? '2' : '3');
+                pageOutline.setAttribute('stroke-dasharray', '5,5');
+                svg.appendChild(pageOutline);
+                
+                // Position shapes within page coordinates
+                const shape1PageX = pageWidth - shapeWidth;
+                const shape1PageY = 0;
+                
+                const shape2PageX = 0;
+                const shape2PageY = pageHeight - shapeHeight;
+                
+                const shape1SvgX = pageLeft + (shape1PageX * svgScale);
+                const shape1SvgY = pageTop + (shape1PageY * svgScale);
+                
+                const shape2SvgX = pageLeft + (shape2PageX * svgScale);
+                const shape2SvgY = pageTop + (shape2PageY * svgScale);
+                
+                const shape1Color = canFitOnPage ? '#FF4444' : '#ff8888';
+                const shape2Color = canFitOnPage ? '#4444FF' : '#8888ff';
+                
+                // Draw shapes, potentially extending beyond page borders if ignoreBorderX is enabled
+                drawPolygonAtPosition(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale, shape1Color, 'Shape 1 (R)');
+                drawPolygonAtPosition(svg, shape2Polygon, shape2SvgX - shape2Bounds.minX * svgScale, shape2SvgY - shape2Bounds.minY * svgScale, svgScale, shape2Color, 'Shape 2 (L)');
+                
+                // Add corner labels only for Shape 1
+                addCornerLabels(svg, shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale, svgScale);
+                
+                // Draw border extension indicators if ignoreBorderX is enabled
+                if (ignoreBorderX && fitToPage) {
+                    // Left border extension for shape 2
+                    const shape2FinalBounds = getPolygonBounds(translatePolygon(shape2Polygon, shape2SvgX - shape2Bounds.minX * svgScale, shape2SvgY - shape2Bounds.minY * svgScale));
+                    if (shape2FinalBounds.minX < pageLeft) {
+                        const extensionLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        extensionLine.setAttribute('x1', shape2FinalBounds.minX);
+                        extensionLine.setAttribute('y1', pageTop);
+                        extensionLine.setAttribute('x2', shape2FinalBounds.minX);
+                        extensionLine.setAttribute('y2', pageTop + pageDisplayHeight);
+                        extensionLine.setAttribute('stroke', '#ff6b6b');
+                        extensionLine.setAttribute('stroke-width', '3');
+                        extensionLine.setAttribute('stroke-dasharray', '10,5');
+                        svg.appendChild(extensionLine);
+                    }
+                    
+                    // Right border extension for shape 1  
+                    const shape1FinalBounds = getPolygonBounds(translatePolygon(shape1Polygon, shape1SvgX - shape1Bounds.minX * svgScale, shape1SvgY - shape1Bounds.minY * svgScale));
+                    if (shape1FinalBounds.maxX > pageLeft + pageDisplayWidth) {
+                        const extensionLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        extensionLine.setAttribute('x1', shape1FinalBounds.maxX);
+                        extensionLine.setAttribute('y1', pageTop);
+                        extensionLine.setAttribute('x2', shape1FinalBounds.maxX);
+                        extensionLine.setAttribute('y2', pageTop + pageDisplayHeight);
+                        extensionLine.setAttribute('stroke', '#ff6b6b');
+                        extensionLine.setAttribute('stroke-width', '3');
+                        extensionLine.setAttribute('stroke-dasharray', '10,5');
+                        svg.appendChild(extensionLine);
+                    }
+                }
+                
+                let statusText = canFitOnPage ? 'FITS PERFECTLY' : 'TOO LARGE';
+                if (ignoreBorderX && canFitOnPage) {
+                    statusText = 'FITS WITH BORDER IGNORE';
+                }
+                const statusColor = canFitOnPage ? '#333' : '#ff4444';
+                
+                addLabel(svg, svgWidth / 2, svgHeight - 40, `Two shapes on ${pageWidth}×${pageHeight}mm page - ${statusText}`, 'bold', '14px', statusColor);
+                
+            } else {
+                // Standard view - just show both shapes without page constraint
+                const padding = 40;
+                const availableWidth = svgWidth - 2 * padding;
+                const availableHeight = svgHeight - 100 - 2 * padding;
+                
+                // Calculate scale to fit both shapes
+                const totalWidth = shapeWidth * 2; // Assume side by side
+                const scaleX = availableWidth / totalWidth;
+                const scaleY = availableHeight / shapeHeight;
+                const displayScale = Math.min(scaleX, scaleY, 1.5);
+                
+                const shape1X = padding;
+                const shape2X = padding + shapeWidth * displayScale + 50;
+                const shapeY = padding;
+                
+                drawPolygonAtPosition(svg, shape1Polygon, shape1X - shape1Bounds.minX * displayScale, shapeY - shape1Bounds.minY * displayScale, displayScale, '#FF4444', 'Shape 1');
+                drawPolygonAtPosition(svg, shape2Polygon, shape2X - shape2Bounds.minX * displayScale, shapeY - shape2Bounds.minY * displayScale, displayScale, '#4444FF', 'Shape 2 (180°)');
+                
+                // Add corner labels only for Shape 1
+                addCornerLabels(svg, shape1Polygon, shape1X - shape1Bounds.minX * displayScale, shapeY - shape1Bounds.minY * displayScale, displayScale);
+                
+                addLabel(svg, svgWidth / 2, svgHeight - 40, `Two shapes for nested cutting`, 'bold');
+            }
+            
+            const totalLengthValue = points.length > 0 ? points[points.length - 1].arcLength : 0;
+            addLabel(svg, svgWidth / 2, svgHeight - 20, `Shape size: ${shapeWidth.toFixed(1)}×${shapeHeight.toFixed(1)}mm, Length: ${totalLengthValue.toFixed(1)}mm`);
+        }
+
+        function drawPolygonAtPosition(svg, polygon, offsetX, offsetY, scale, color, label = null) {
+            const svgNS = 'http://www.w3.org/2000/svg';
+            
+            let pathData = `M ${(offsetX + polygon[0].x * scale).toFixed(2)} ${(offsetY + polygon[0].y * scale).toFixed(2)}`;
+            for (let i = 1; i < polygon.length; i++) {
+                pathData += ` L ${(offsetX + polygon[i].x * scale).toFixed(2)} ${(offsetY + polygon[i].y * scale).toFixed(2)}`;
+            }
+            pathData += ' Z';
+            
+            const shapePath = document.createElementNS(svgNS, 'path');
+            shapePath.setAttribute('d', pathData);
+            const r = parseInt(color.substring(1,3), 16);
+            const g = parseInt(color.substring(3,5), 16);
+            const b = parseInt(color.substring(5,7), 16);
+            shapePath.setAttribute('fill', `rgba(${r}, ${g}, ${b}, 0.1)`);
+            shapePath.setAttribute('stroke', color);
+            shapePath.setAttribute('stroke-width', '2');
+            svg.appendChild(shapePath);
+            
+            if (label) {
+                const bounds = getPolygonBounds(polygon);
+                const centerX = offsetX + ((bounds.minX + bounds.maxX) / 2) * scale;
+                const centerY = offsetY + ((bounds.minY + bounds.maxY) / 2) * scale;
+                addLabel(svg, centerX, centerY, label, 'normal', '12px', color);
+            }
+        }
+        
+        function addLabel(svg, x, y, text, weight = 'normal', fontSize = '12px', color = '#333') {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', x);
+            label.setAttribute('y', y);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('font-size', fontSize);
+            label.setAttribute('font-weight', weight);
+            label.setAttribute('fill', color);
+            label.textContent = text;
+            svg.appendChild(label);
+        }
+        
+        function saveSVG() {
+            const svg = document.getElementById('svgCanvas');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = svgUrl;
+            downloadLink.download = 'cone_tape_pattern.svg';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+        
+        window.addEventListener('load', () => {
+            init3D();
+            updateVisualization();
+        });
+    </script>
+</body>
+</html>
